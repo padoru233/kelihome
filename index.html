@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="可力小屋">
+    <link rel="icon" href="assets/logo.png" type="image/png">
+    <title>可力小屋</title>
+    <style>
+        :root { color-scheme: light; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; padding: 32px 20px; display: grid; place-items: center; color: #4b3a42; background: #ffe8f0; }
+        body.mode-audit { color: #303133; background: #f5f7fa; }
+        .page { width: min(100%, 560px); padding: 40px; text-align: center; border: 1px solid rgba(255, 255, 255, .7); border-radius: 8px; background: rgba(255, 255, 255, .88); box-shadow: 0 12px 32px rgba(122, 67, 91, .14); }
+        .mode-audit .page { border-color: #e4e7ed; box-shadow: 0 5px 15px rgba(0, 0, 0, .05); }
+        .brand { display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .brand img { width: 48px; height: 48px; object-fit: contain; }
+        h1 { margin: 0; font-size: 2rem; color: #ed649c; }
+        .mode-audit h1 { color: #303133; }
+        .slogan { margin: 12px 0 28px; color: #76616b; }
+        .mode-audit .slogan { color: #909399; font-family: monospace; }
+        .divider { width: 48px; height: 2px; margin: 0 auto 26px; background: #ff9cbd; }
+        .announcements { display: grid; gap: 10px; margin: 0 0 20px; text-align: left; }
+        .announcement { padding: 12px 14px; border-left: 3px solid #ff9cbd; background: #fff7fa; color: #765965; font-size: .92rem; line-height: 1.6; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 20px; }
+        .gallery a { display: block; overflow: hidden; border-radius: 6px; background: #fff4f8; }
+        .gallery img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transition: transform .25s ease; }
+        .gallery a:hover img { transform: scale(1.04); }
+        .join-card { padding: 16px; border: 2px dashed #ffc0d5; border-radius: 6px; background: #fff; }
+        .join-card span { display: block; color: #888; font-size: .9rem; }
+        .join-card strong { display: block; margin-top: 4px; color: #ed649c; font-size: 1.45rem; }
+        .join-button { display: inline-block; margin-top: 20px; padding: 12px 32px; border: 0; border-radius: 6px; background: #ef719f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+        .join-button:hover { background: #d95888; }
+        .audit-copy { text-align: left; line-height: 1.8; color: #606266; font-size: .9rem; }
+        .footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid #f0dce4; color: #a48491; font-size: .78rem; line-height: 1.9; }
+        .mode-audit .footer { border-color: #eee; color: #999; }
+        .footer a { color: inherit; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .hidden { display: none; }
+        @media (max-width: 480px) { body { padding: 16px; } .page { padding: 30px 22px; } h1 { font-size: 1.7rem; } }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header>
+            <div class="brand"><img src="assets/logo.png" alt="可力小屋 Logo"><h1 id="title"></h1></div>
+            <p class="slogan" id="slogan"></p>
+        </header>
+        <section id="communityContent">
+            <div class="divider"></div>
+            <div class="announcements" id="announcements"></div>
+            <div class="gallery" id="gallery"></div>
+            <div class="join-card"><span>欢迎加入交流群</span><strong id="groupNumber"></strong></div>
+            <button class="join-button" id="joinButton" type="button">点击加入</button>
+        </section>
+        <section id="auditContent" class="hidden"><p class="audit-copy"><strong>System Status: Online</strong><br>“可力小屋”是个人用于存放计算机技术学习笔记、代码片段的数字化空间。仅用于技术记录，不涉及经营性业务。</p></section>
+        <footer class="footer" id="footer"></footer>
+    </main>
+    <script>
+        const siteConfig = {
+            title: '可力小屋', forceAuditMode: false, auditDates: { month: 1, startDay: 19, endDay: 30 },
+            community: { slogan: '对可爱的事物没有抵抗力', groupNumber: '1055588708', joinUrl: 'https://qm.qq.com/cgi-bin/qm/qr?k=s7T7vw2ceZrk0M2rl8rNPfzyMDe4L6tM&jump_from=webapi', announcements: ['欢迎来到可力小屋交流群。'], images: [] },
+            audit: { slogan: 'Personal Code Repository / 技术知识库', icp: { text: '苏ICP备2026003693号', url: 'https://beian.miit.gov.cn/' }, police: { text: '苏公网安备 32050802012501号', url: 'http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=32050802012501' } }
+        };
+        const createElement = (tagName, properties = {}) => Object.assign(document.createElement(tagName), properties);
+        function isAuditMode() { const { month, startDay, endDay } = siteConfig.auditDates; const today = new Date(); return siteConfig.forceAuditMode || (today.getMonth() + 1 === month && today.getDate() >= startDay && today.getDate() <= endDay); }
+        function renderCommunity() {
+            const { community } = siteConfig;
+            document.getElementById('groupNumber').textContent = community.groupNumber;
+            document.getElementById('joinButton').addEventListener('click', () => window.open(community.joinUrl, '_blank', 'noopener'));
+            const announcements = document.getElementById('announcements');
+            community.announcements.forEach((text) => announcements.append(createElement('p', { className: 'announcement', textContent: text })));
+            const gallery = document.getElementById('gallery');
+            community.images.forEach(({ src, alt = '', href = src }) => gallery.append(createElement('a', { href, target: '_blank', rel: 'noopener', append: createElement('img', { src, alt }) })));
+        }
+        function renderFooter(audit) {
+            const footer = document.getElementById('footer'); const year = new Date().getFullYear();
+            if (!audit) { footer.textContent = `© ${year} Keli Group`; return; }
+            const { icp, police } = siteConfig.audit;
+            [icp, police].forEach((record) => footer.append(createElement('a', { href: record.url, target: '_blank', rel: 'noopener', textContent: record.text }), document.createElement('br')));
+            footer.append(`© ${year} Personal Tech Blog`);
+        }
+        function initPage() {
+            const audit = isAuditMode();
+            document.body.classList.toggle('mode-audit', audit); document.getElementById('title').textContent = siteConfig.title; document.title = siteConfig.title;
+            document.getElementById('slogan').textContent = audit ? siteConfig.audit.slogan : siteConfig.community.slogan;
+            document.getElementById('communityContent').classList.toggle('hidden', audit); document.getElementById('auditContent').classList.toggle('hidden', !audit);
+            if (!audit) renderCommunity(); renderFooter(audit);
+        }
+        initPage();
+    </script>
+</body>
+</html>
