@@ -59,7 +59,7 @@
     <script>
         const siteConfig = {
             title: '可力小屋', forceAuditMode: false, auditDates: { month: 1, startDay: 19, endDay: 30 },
-            community: { slogan: '对可爱的事物没有抵抗力', groupNumber: '1055588708', joinUrl: 'https://qm.qq.com/cgi-bin/qm/qr?k=s7T7vw2ceZrk0M2rl8rNPfzyMDe4L6tM&jump_from=webapi', announcements: ['欢迎来到可力小屋交流群。'], images: [] },
+            community: { slogan: '对可爱的事物没有抵抗力', backgroundImage: 'https://moe.jitsu.top/img', groupNumber: '1055588708', joinUrl: 'https://qm.qq.com/cgi-bin/qm/qr?k=s7T7vw2ceZrk0M2rl8rNPfzyMDe4L6tM&jump_from=webapi', announcements: ['欢迎来到可力小屋交流群。'], images: [] },
             audit: { slogan: 'Personal Code Repository / 技术知识库', icp: { text: '苏ICP备2026003693号', url: 'https://beian.miit.gov.cn/' }, police: { text: '苏公网安备 32050802012501号', url: 'http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=32050802012501' } }
         };
         const createElement = (tagName, properties = {}) => Object.assign(document.createElement(tagName), properties);
@@ -83,6 +83,10 @@
         function initPage() {
             const audit = isAuditMode();
             document.body.classList.toggle('mode-audit', audit); document.getElementById('title').textContent = siteConfig.title; document.title = siteConfig.title;
+            document.body.style.backgroundImage = audit ? '' : `url("${siteConfig.community.backgroundImage}")`;
+            document.body.style.backgroundPosition = audit ? '' : 'center';
+            document.body.style.backgroundSize = audit ? '' : 'cover';
+            document.body.style.backgroundRepeat = audit ? '' : 'no-repeat';
             document.getElementById('slogan').textContent = audit ? siteConfig.audit.slogan : siteConfig.community.slogan;
             document.getElementById('communityContent').classList.toggle('hidden', audit); document.getElementById('auditContent').classList.toggle('hidden', !audit);
             if (!audit) renderCommunity(); renderFooter(audit);
