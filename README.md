@@ -37,3 +37,9 @@ python3 -m http.server 8080
 ```
 
 然后访问 `http://localhost:8080`。
+
+## EdgeOne 自动部署
+
+仓库包含 GitHub Actions 工作流 `.github/workflows/trigger-edgeone.yml`。每次推送到 `main` 分支时，工作流会向 EdgeOne 部署钩子发送 `POST` 请求。
+
+请在 GitHub 仓库的 **Settings > Secrets and variables > Actions** 中创建名为 `EDGEONE_DEPLOY_HOOK` 的 Repository secret，值填写 EdgeOne 控制台生成的完整部署钩子 URL。该 URL 可能包含鉴权信息，请勿直接写入仓库文件。
