@@ -51,6 +51,16 @@ Logo 固定使用 `assets/logo.png`，同时作为浏览器标签图标。
 }
 ```
 
+`currentEpisode.progress` 使用 `翻译中`、`校对中`、`嵌字中` 或 `已完成`。为兼容已有目录数据，
+页面会将旧的 `已完结` 视为 `已完成`。
+
+“已完成”不只表示话数全部完结：只要 `currentEpisode` 为 `null`，即当前没有进行中的工序
+（话数全部完结，或作品集还没有话数），卡片显示并按“已完成”筛选。没有话数时不显示
+“完成 x / y 话”。
+
+当项目带有 `"standalone": true` 时，该项代表作品集里的单独一话：卡片只显示进度，不显示
+“第 N 话”和“完成 x / y 话”。普通项目不受影响。
+
 目录由 [cloud-functions/api/catalog.js](./cloud-functions/api/catalog.js) 从 EdgeOne Makers Blob 读取。
 写入接口位于 [cloud-functions/api/catalog-sync.js](./cloud-functions/api/catalog-sync.js)，仅允许持有
 `CATALOG_SYNC_TOKEN` 的 Bot 调用。不要将此密钥写入仓库或前端。

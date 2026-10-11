@@ -109,7 +109,13 @@
         <section id="catalog" aria-label="漫画目录">
             <div class="filters">
                 <label class="field"><input id="searchInput" type="search" placeholder="搜索漫画名、别称或标签" autocomplete="off"></label>
-                <label class="field"><select id="progressFilter" aria-label="筛选进度"><option value="">全部进度</option></select></label>
+                <label class="field"><select id="progressFilter" aria-label="筛选进度">
+                    <option value="">全部进度</option>
+                    <option value="翻译中">翻译中</option>
+                    <option value="校对中">校对中</option>
+                    <option value="嵌字中">嵌字中</option>
+                    <option value="已完成">已完成</option>
+                </select></label>
                 <label class="field"><select id="sortSelect" aria-label="排序方式"><option value="updated">按更新时间</option><option value="name">按名称</option></select></label>
             </div>
             <div class="catalog-meta"><p id="status" class="status" role="status">正在加载目录…</p></div>
@@ -145,6 +151,7 @@
             }
         };
 
+        const COMPLETED_PROGRESS = "已完成";
         const state = { items: [], page: 1 };
         const elements = {
             comicGrid: document.getElementById("comicGrid"),
@@ -200,11 +207,19 @@
             if (!value || typeof value !== "object" || typeof value.name !== "string") return null;
             const aliases = Array.isArray(value.aliases) ? value.aliases.filter((item) => typeof item === "string") : [];
             const tags = Array.isArray(value.tags) ? value.tags.filter((item) => typeof item === "string") : [];
-            const currentEpisode = value.currentEpisode && typeof value.currentEpisode === "object" ? value.currentEpisode : null;
+            const currentEpisode = value.currentEpisode && typeof value.currentEpisode === "object"
+                ? {
+                    ...value.currentEpisode,
+                    progress: value.currentEpisode.progress === "已完结"
+                        ? COMPLETED_PROGRESS
+                        : value.currentEpisode.progress
+                }
+                : null;
             return {
                 name: value.name,
                 aliases,
                 tags,
+                standalone: value.standalone === true,
                 currentEpisode,
                 completedEpisodeCount: Number.isInteger(value.completedEpisodeCount) ? value.completedEpisodeCount : 0,
                 episodeCount: Number.isInteger(value.episodeCount) ? value.episodeCount : 0,
@@ -219,7 +234,7 @@
             const progress = elements.progressFilter.value;
             const filteredItems = state.items.filter((item) => {
                 const searchable = [item.name, ...item.aliases, ...item.tags].join(" ").toLocaleLowerCase();
-                const itemProgress = item.currentEpisode?.progress || "已完结";
+                const itemProgress = item.currentEpisode?.progress || COMPLETED_PROGRESS;
                 return (!keyword || searchable.includes(keyword)) && (!progress || itemProgress === progress);
             });
             return filteredItems.sort((left, right) => {
@@ -258,17 +273,29 @@
             item.tags.slice(0, 5).forEach((tag) => tags.append(createElement("span", { className: "tag", textContent: tag })));
             body.append(tags);
             const episode = createElement("div", { className: "episode" });
-            if (item.currentEpisode) {
-                const row = createElement("div", { className: "episode-row" });
-                row.append(
-                    createElement("span", { className: "episode-title", textContent: item.currentEpisode.title || "当前话数未知" }),
-                    createElement("span", { className: "progress", textContent: item.currentEpisode.progress || "进行中" })
-                );
-                episode.append(row);
+            if (item.standalone) {
+                // 单话卡片的标题已经是话名，只需展示进度
+                const isActive = Boolean(item.currentEpisode);
+                episode.append(createElement("span", {
+                    className: isActive ? "progress" : "completed",
+                    textContent: item.currentEpisode?.progress || COMPLETED_PROGRESS
+                }));
             } else {
-                episode.append(createElement("span", { className: "completed", textContent: item.episodeCount ? "已完结" : "暂无话数" }));
+                if (item.currentEpisode) {
+                    const row = createElement("div", { className: "episode-row" });
+                    row.append(
+                        createElement("span", { className: "episode-title", textContent: item.currentEpisode.title || "当前话数未知" }),
+                        createElement("span", { className: "progress", textContent: item.currentEpisode.progress || "进行中" })
+                    );
+                    episode.append(row);
+                } else {
+                    // 当前没有进行中的工序（全部完结或还没有话数）都算已完成
+                    episode.append(createElement("span", { className: "completed", textContent: COMPLETED_PROGRESS }));
+                }
+                if (item.episodeCount > 0) {
+                    episode.append(createElement("span", { textContent: `完成 ${item.completedEpisodeCount} / ${item.episodeCount} 话` }));
+                }
             }
-            episode.append(createElement("span", { textContent: `完成 ${item.completedEpisodeCount} / ${item.episodeCount} 话` }));
             body.append(episode);
             body.append(createElement("time", { className: "card-date", textContent: formatDate(item.updatedAt), dateTime: item.updatedAt || "" }));
             card.append(body);
@@ -295,11 +322,6 @@
             elements.pageIndicator.textContent = `${state.page} / ${pageCount}`;
         }
 
-        function populateProgressFilter() {
-            const values = [...new Set(state.items.map((item) => item.currentEpisode?.progress || "已完结"))].sort((left, right) => left.localeCompare(right, "zh-CN"));
-            values.forEach((value) => elements.progressFilter.append(createElement("option", { value, textContent: value })));
-        }
-
         async function loadCatalog() {
             try {
                 const response = await fetch(siteConfig.catalogUrl, { cache: "no-cache" });
@@ -308,7 +330,6 @@
                 if (!catalog || !Array.isArray(catalog.items)) throw new Error("目录数据格式无效");
                 state.items = catalog.items.map(normalizeItem).filter(Boolean);
                 elements.updatedAt.textContent = catalog.generatedAt ? `数据更新：${formatDate(catalog.generatedAt)}` : "";
-                populateProgressFilter();
                 renderCatalog();
             } catch (error) {
                 elements.status.textContent = "目录数据暂时不可用，请稍后刷新重试。";
