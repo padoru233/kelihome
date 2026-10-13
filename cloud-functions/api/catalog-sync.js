@@ -3,10 +3,27 @@ import { getStore } from "@edgeone/pages-blob";
 const MAX_CATALOG_SIZE_BYTES = 1_000_000;
 
 export async function onRequestPost(context) {
-    const token = context.env?.CATALOG_SYNC_TOKEN ?? process.env.CATALOG_SYNC_TOKEN;
+    const contextToken = context.env?.CATALOG_SYNC_TOKEN;
+    const processToken =
+        typeof process !== "undefined"
+            ? process.env?.CATALOG_SYNC_TOKEN
+            : undefined;
+    const token = contextToken || processToken;
     const authorization = context.request.headers.get("Authorization");
 
     if (!token || authorization !== `Bearer ${token}`) {
+        console.error("Catalog sync authentication failed", {
+            contextTokenConfigured: Boolean(contextToken),
+            processTokenConfigured: Boolean(processToken),
+            authorizationPresent: Boolean(authorization),
+            bearerScheme: authorization?.startsWith("Bearer ") ?? false,
+            matchesContextToken: contextToken
+                ? authorization === `Bearer ${contextToken}`
+                : null,
+            matchesProcessToken: processToken
+                ? authorization === `Bearer ${processToken}`
+                : null
+        });
         return new Response("Unauthorized", { status: 401 });
     }
 
