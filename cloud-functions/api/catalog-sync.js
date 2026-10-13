@@ -9,7 +9,13 @@ export async function onRequestPost(context) {
             ? process.env?.CATALOG_SYNC_TOKEN
             : undefined;
     const token = contextToken || processToken;
-    const authorization = context.request.headers.get("Authorization");
+    const syncToken = context.request.headers.get("X-Catalog-Sync-Token");
+    const rawAuthorization = context.request.headers.get("Authorization");
+    const bearerToken = rawAuthorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+    const authorization =
+        token && (syncToken === token || bearerToken === token)
+            ? `Bearer ${token}`
+            : rawAuthorization;
 
     if (!token || authorization !== `Bearer ${token}`) {
         console.error("Catalog sync authentication failed", {
@@ -17,6 +23,13 @@ export async function onRequestPost(context) {
             processTokenConfigured: Boolean(processToken),
             authorizationPresent: Boolean(authorization),
             bearerScheme: authorization?.startsWith("Bearer ") ?? false,
+            syncTokenPresent: Boolean(syncToken),
+            syncTokenMatchesContext: contextToken
+                ? syncToken === contextToken
+                : null,
+            syncTokenMatchesProcess: processToken
+                ? syncToken === processToken
+                : null,
             matchesContextToken: contextToken
                 ? authorization === `Bearer ${contextToken}`
                 : null,

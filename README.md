@@ -63,7 +63,8 @@ Logo 固定使用 `assets/logo.png`，同时作为浏览器标签图标。
 
 目录由 [cloud-functions/api/catalog.js](./cloud-functions/api/catalog.js) 从 EdgeOne Makers Blob 读取。
 写入接口位于 [cloud-functions/api/catalog-sync.js](./cloud-functions/api/catalog-sync.js)，仅允许持有
-`CATALOG_SYNC_TOKEN` 的 Bot 调用。不要将此密钥写入仓库或前端。
+`CATALOG_SYNC_TOKEN` 的 Bot 调用。Bot 使用 `X-Catalog-Sync-Token` 认证，并兼容 Bearer
+认证。不要将此密钥写入仓库或前端。
 
 Blob SDK（`@edgeone/pages-blob`）是 Node.js SDK，运行时凭证由 Makers 在 **Node.js
 Cloud Functions** 中注入，因此两个接口必须放在仓库根目录的 `cloud-functions/`。
