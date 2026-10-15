@@ -21,12 +21,13 @@
         .brand-copy span { margin-top: 3px; color: #a48491; font-size: .7rem; }
         .nav-link { color: #76616b; font-size: .9rem; text-decoration: none; }
         .nav-link:hover { color: #ed649c; }
-        .page { width: min(100% - 40px, 1120px); margin: 32px auto 0; padding: 30px; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: rgba(255, 255, 255, .88); box-shadow: 0 12px 32px rgba(122, 67, 91, .14); }
+        .page { width: min(100% - 40px, 1120px); margin: 32px auto 0; padding: 30px 30px 88px; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: rgba(255, 255, 255, .88); box-shadow: 0 12px 32px rgba(122, 67, 91, .14); }
         .hero { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
         .hero h1 { margin: 0; color: #ed649c; font-size: clamp(1.35rem, 2.5vw, 1.8rem); }
         .hero p { margin: 8px 0 0; color: #76616b; font-size: .9rem; }
         .updated-at { color: #a48491; font-size: .78rem; white-space: nowrap; }
-        .join-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 14px 16px; border: 2px dashed #ffc0d5; border-radius: 6px; background: #fff; }
+        .join-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .join-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 2px dashed #ffc0d5; border-radius: 6px; background: #fff; }
         .join-card span { display: block; color: #888; font-size: .83rem; }
         .join-card strong { display: block; margin-top: 3px; color: #ed649c; font-size: 1.2rem; }
         .join-button { flex: 0 0 auto; padding: 9px 15px; border-radius: 6px; color: #fff; background: #ef719f; font-size: .86rem; font-weight: 700; text-decoration: none; }
@@ -60,7 +61,7 @@
         .completed { color: #a48491; }
         .card-date { color: #b296a1; font-size: .7rem; }
         .empty { grid-column: 1 / -1; padding: 60px 20px; border: 1px dashed #e5bacb; border-radius: 6px; color: #a48491; text-align: center; }
-        .pagination { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 28px 0; }
+        .pagination { position: fixed; z-index: 10; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; display: flex; width: min(calc(100% - 40px), 1120px); align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 10px; border: 1px solid #f0dce4; border-radius: 8px; background: rgba(255, 255, 255, .96); box-shadow: 0 6px 20px rgba(122, 67, 91, .16); transform: translateX(-50%); }
         .pagination button { min-width: 76px; min-height: 34px; padding: 0 12px; border: 1px solid #ffc0d5; border-radius: 4px; color: #b95c83; background: #fff7fa; }
         .pagination button:hover:not(:disabled) { border-color: #ed649c; color: #d95888; }
         .pagination button:disabled { cursor: not-allowed; opacity: .45; }
@@ -83,8 +84,11 @@
             .hero { align-items: start; flex-direction: column; gap: 5px; }
             .filters { grid-template-columns: 1fr; }
             .catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .join-groups { grid-template-columns: 1fr; }
             .join-card { align-items: start; flex-direction: column; }
             .join-button { width: 100%; text-align: center; }
+            .pagination { bottom: max(14px, env(safe-area-inset-bottom)); width: calc(100% - 28px); }
+            .pagination button { flex: 1; min-width: 0; }
         }
     </style>
 </head>
@@ -102,10 +106,16 @@
             </div>
             <time id="updatedAt" class="updated-at"></time>
         </section>
-        <section class="join-card" aria-label="交流群">
-            <div><span>欢迎加入交流群</span><strong id="groupNumber"></strong></div>
-            <a id="joinButton" class="join-button" target="_blank" rel="noopener noreferrer nofollow">点击加入</a>
-        </section>
+        <div class="join-groups">
+            <section class="join-card" aria-label="交流群">
+                <div><span>欢迎加入交流群</span><strong id="groupNumber"></strong></div>
+                <a id="joinButton" class="join-button" target="_blank" rel="noopener noreferrer nofollow">加入交流群</a>
+            </section>
+            <section class="join-card" aria-label="测试群">
+                <div><span>如果对我们的工作感兴趣，欢迎加入我们</span><strong id="testGroupNumber"></strong></div>
+                <a id="testGroupJoinButton" class="join-button" target="_blank" rel="noopener noreferrer nofollow">加入测试群</a>
+            </section>
+        </div>
         <section id="catalog" aria-label="漫画目录">
             <div class="filters">
                 <label class="field"><input id="searchInput" type="search" placeholder="搜索漫画名、别称或标签" autocomplete="off"></label>
@@ -142,7 +152,9 @@
             community: {
                 backgroundImage: "https://moe.jitsu.top/img",
                 groupNumber: "1055588708",
-                joinUrl: "https://qm.qq.com/q/Iciv8Fk1SQ"
+                joinUrl: "https://qm.qq.com/q/Iciv8Fk1SQ",
+                testGroupNumber: "689745093",
+                testGroupJoinUrl: "https://qm.qq.com/q/lximlUvtVm"
             },
             audit: {
                 slogan: "Personal Code Repository / 技术知识库",
@@ -157,6 +169,8 @@
             comicGrid: document.getElementById("comicGrid"),
             groupNumber: document.getElementById("groupNumber"),
             joinButton: document.getElementById("joinButton"),
+            testGroupNumber: document.getElementById("testGroupNumber"),
+            testGroupJoinButton: document.getElementById("testGroupJoinButton"),
             pagination: document.getElementById("pagination"),
             progressFilter: document.getElementById("progressFilter"),
             previousPage: document.getElementById("previousPage"),
@@ -349,6 +363,8 @@
             document.body.style.backgroundRepeat = "no-repeat";
             elements.groupNumber.textContent = community.groupNumber;
             elements.joinButton.href = community.joinUrl;
+            elements.testGroupNumber.textContent = community.testGroupNumber;
+            elements.testGroupJoinButton.href = community.testGroupJoinUrl;
             elements.searchInput.addEventListener("input", () => { state.page = 1; renderCatalog(); });
             elements.progressFilter.addEventListener("change", () => { state.page = 1; renderCatalog(); });
             elements.sortSelect.addEventListener("change", () => { state.page = 1; renderCatalog(); });
