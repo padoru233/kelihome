@@ -11,6 +11,7 @@
         if (!Array.isArray(catalog?.items)) throw new Error("Invalid catalog");
         const item = catalog.items.find((entry) => entry && String(entry.id) === id);
         if (!item) {
+            status.hidden = false;
             status.textContent = "该漫画已不在最新公开目录中，以上为缓存记录。";
             return;
         }
@@ -28,8 +29,10 @@
             updated.removeAttribute("datetime");
             updated.textContent = "暂无更新记录";
         }
-        status.textContent = "已更新为当前目录中的进度。";
+        status.textContent = "";
+        status.hidden = true;
     } catch {
+        status.hidden = false;
         status.textContent = "暂时无法刷新进度，仍显示最近缓存的记录。";
     } finally { clearTimeout(timeout); }
 })();

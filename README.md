@@ -1,21 +1,26 @@
 # 可力小屋漫画目录
 欢迎来到**对可爱的事物没有抵抗力汉化组**  
 我们的主页是[**keli.love**](https://www.keli.love)  
-首页是无需前端构建的静态页面；漫画目录、详情页和 sitemap 由 EdgeOne Makers
-Node.js Cloud Functions 动态返回。请部署整个仓库，保留 `cloud-functions/` 和
-`assets/`，无需增加构建命令或定时重新部署。普通静态文件服务器只能预览首页外壳，
-不能提供目录接口与动态详情页。
+首页、漫画详情页和 sitemap 由 EdgeOne Makers Node.js Cloud Functions 动态返回，
+样式和浏览器脚本为静态资源。请部署整个仓库，保留 `cloud-functions/` 和 `assets/`。
+不需要前端构建命令、定时构建或单独运行后台服务器；Bot 更新 Blob 后，各层缓存刷新即可生效。
+
+**根目录不能再放 `index.html`**：EdgeOne 静态资源优先于同名函数，会覆盖动态首页。
+首页入口为 `cloud-functions/index.js`，模板为 `cloud-functions/_lib/home-template.js`，
+样式和交互分别为 `assets/home.css`、`assets/home.js`。模板使用 JS 模块导入，
+不依赖运行时读文件或额外的 `includeFiles` 配置。旧 `/index.html`、`/comics` 地址重定向到 `/`。
 
 ## 配置内容
 
-在 `index.html` 顶部的 `siteConfig` 中维护页面内容：
+在 `assets/home.js` 顶部的 `siteConfig` 中维护页面内容：
 
 - `forceAuditMode`：设为 `true` 可强制显示备案页。
 - `auditDates`：配置每年自动显示备案页的日期范围。
 - `catalogUrl`：同源 Makers Function 目录地址，固定为 `/api/catalog`。
 - `pageSize`：每页显示的漫画项目数量，默认是 `24`。
 
-页面不提供图片上传或手工图片卡片功能。漫画卡片完全由 Bot 目录 JSON 渲染，
+页面不提供图片上传或手工图片卡片功能。漫画卡片由云函数读取 Bot 目录 JSON 生成，浏览器直接使用 HTML 中附带的公开数据进行搜索、筛选和分页，
+首次正常加载不重复请求 `/api/catalog`。
 其中 `coverUrl` 为空、不是再漫画封面域名，或图片加载失败时，页面显示“暂无封面”。
 Logo 固定使用 `assets/logo.png`，同时作为浏览器标签图标。
 
@@ -96,13 +101,9 @@ TRANS_PUBLIC_CATALOG_SYNC_URL=https://www.keli.love/api/catalog-sync
 
 ## 本地预览
 
-直接在浏览器打开 `index.html` 即可预览。若需要通过 HTTP 访问，可在此目录运行：
-
-```bash
-python3 -m http.server 8080
-```
-
-然后访问 `http://localhost:8080`。
+动态首页需要支持 Cloud Functions 的 EdgeOne 本地开发环境；直接打开静态文件或使用
+`python3 -m http.server` 不能提供首页与动态接口。运行 `npm test` 可在无 Blob 凭证的环境
+验证生成的 HTML、数据转义、错误响应和缓存行为。访问真实 Blob 的预览需要平台运行时凭证。
 
 ## EdgeOne 自动部署
 
@@ -112,10 +113,12 @@ python3 -m http.server 8080
 
 ## 搜索入口与动态 HTML
 
-- `/comics`：返回包含全部公开漫画名称、别名和普通详情链接的 HTML，不依赖 JS 翻页。
+- `/`：初始 HTML 包含全部公开漫画卡片、名称、别名和详情链接。禁用 JS 时显示全部漫画；
+  启用 JS 后保留原有搜索、筛选、排序和每页 24 项的交互。首次加载使用页面内安全嵌入的公开 JSON，
+  不重复请求接口。旧 `/comics` 仅做 301 重定向，不再维护单独的目录页。
 - `/comics/123`、`/comics/episode-456`：返回漫画标题、别名、标签、封面、进度、
-  更新时间和再漫画阅读入口。首页卡片优先进入站内详情页；缺少合法 ID 的旧数据仍使用外链。
-- `/sitemap.xml`：函数动态返回首页、目录页、详情页的正式域名地址；详情页的 `lastmod`
+  更新时间和再漫画阅读入口。首页卡片进入站内详情页；公开 HTML 只包含合法稳定 ID 的漫画。
+- `/sitemap.xml`：函数动态返回首页、详情页的正式域名地址；详情页的 `lastmod`
   只使用有效的 `updatedAt`，不使用当前请求时间。原来的搜索引擎验证文件保持可用。
 - `/robots.txt`：允许抓取并声明 sitemap。部署后在各站长平台提交
   `https://www.keli.love/sitemap.xml`。
@@ -126,8 +129,9 @@ python3 -m http.server 8080
 
 ### 缓存与更新
 
-动态 HTML 和 sitemap 声明 `public, max-age=60, s-maxage=1800`：浏览器缓存 1 分钟，
-支持该策略的共享缓存保存 30 分钟。读取目录另有 **60 秒函数实例内缓存**，合并同实例的
+首页声明 `public, max-age=60, s-maxage=300`；详情页和 sitemap 声明
+`public, max-age=60, s-maxage=1800`：浏览器缓存 1 分钟，支持该策略的共享缓存分别保存
+5 分钟和 30 分钟。读取目录另有 **60 秒函数实例内缓存**，合并同实例的
 并发读取；冷启动、不同实例不会共享它，也不会因此免除函数调用。
 
 Bot 同步后无需重新部署。新增、改名、删除会在各层缓存过期及 Blob 最终一致读取刷新后反映；
@@ -135,11 +139,11 @@ Bot 同步后无需重新部署。新增、改名、删除会在各层缓存过�
 详情页 JS 通过现有 `/api/catalog` 获取较新的进度，该接口也有自己的缓存时间。
 
 **不要仅凭响应头认定 EdgeOne 已缓存云函数响应。** 官方缓存文档主要说明静态资源；
-上线后必须重复请求 `/comics`、一个真实详情地址、`/sitemap.xml`，检查平台返回的
+上线后必须重复请求 `/`、一个真实详情地址、`/sitemap.xml`，检查平台返回的
 缓存命中信息（如有），并结合云函数调用量与日志确认。若未命中，应核对项目/套餐是否支持
 对应动态路由缓存及其配置；在验证前按每个请求可能调用函数估算额度。
 
-这些新增路由通过 `cloud-functions/comics/index.js`、`cloud-functions/comics/[id].js`
+这些路由通过 `cloud-functions/index.js`、`cloud-functions/comics/[id].js`
 和 `cloud-functions/sitemap.xml.js` 映射，无需 SPA 重写或构建命令。不要创建同名静态文件
 覆盖函数路由。`_lib/` 内的辅助模块没有 Handler 导出，不会成为独立函数路由。
 
@@ -150,12 +154,14 @@ sitemap、缓存过期/并发读取、删除和前端刷新失败。无需新增
 部署后检查：
 
 ```bash
-curl -i https://www.keli.love/comics
+curl -i https://www.keli.love/
+curl -i https://www.keli.love/comics # 应返回 301，Location: /
 curl -i https://www.keli.love/comics/123 # 替换为真实 ID
 curl -i https://www.keli.love/comics/999999999999
 curl -i https://www.keli.love/sitemap.xml
 curl -i https://www.keli.love/robots.txt
 ```
 
-查看详情页源代码应直接包含漫画名和进度；禁用 JavaScript 仍可浏览目录和详情。
+查看首页和详情页源代码应直接包含漫画名和进度；禁用 JavaScript 仍可浏览全部漫画和详情。
+浏览器首次打开首页时，网络面板不应出现额外的 `/api/catalog` 请求；详情页仍通过该接口刷新进度。
 上线需一次代码部署，后续目录更新不会触发构建。

@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import { normalizeCatalog, createCatalogReader } from "../cloud-functions/_lib/catalog.js";
-import { catalogPage, comicPage, sitemapPage } from "../cloud-functions/_lib/pages.js";
+import { comicPage, sitemapPage } from "../cloud-functions/_lib/pages.js";
+
+import { homePage, serializeCatalog } from "../cloud-functions/_lib/home.js";
+import { onRequestGet as redirectCatalog } from "../cloud-functions/comics/index.js";
 
 const sample = { id: 123, name: '漫画<&"测试', aliases: ['别名<script>alert(1)</script>'], tags: ['百合'],
     currentEpisode: { title: '第 2 话', progress: '校对中' }, episodeCount: 3, completedEpisodeCount: 1,
@@ -21,10 +24,12 @@ test('HTML contains crawlable content, stable links, escaped text, and no privat
     assert.doesNotMatch(html, /must-not-leak|<script>alert/);
     assert.match(html, /完成 1 \/ 3 话/);
     assert.match(html, /rel="canonical" href="https:\/\/www.keli.love\/comics\/123"/);
-    assert.match(html, /校对中/);
+    assert.match(html, /汉化进度：<span id="comicEpisode">第 2 话<\/span> <span id="comicProgress">校对中<\/span>/);
+    assert.match(html, /<p>汉化进度与更新信息，由可力小屋整理<\/p>/);
+    assert.match(html, /id="refreshStatus" role="status" hidden><\/p>/);
     assert.match(result.headers.get('cache-control'), /s-maxage=1800/);
     assert.match(result.headers.get('content-security-policy'), /script-src 'self'/);
-    const directory = await (await catalogPage(read)).text();
+    const directory = await (await homePage(read)).text();
     assert.match(directory, /href="\/comics\/123"/);
     assert.match(directory, /href="\/comics\/episode-5"/);
 });
@@ -33,7 +38,7 @@ test('single episodes and empty collections retain existing display semantics', 
     const html = await (await comicPage('episode-5', read)).text();
     assert.match(html, /已完成/);
     assert.doesNotMatch(html, /完成 1 \/ 3 话/);
-    assert.match(await (await catalogPage(async () => [])).text(), /暂无公开漫画/);
+    assert.match(await (await homePage(async () => [])).text(), /暂无公开漫画/);
 });
 
 test('invalid IDs avoid storage; absent comics return uncached real 404', async () => {
@@ -50,7 +55,7 @@ test('invalid IDs avoid storage; absent comics return uncached real 404', async 
 
 test('storage failures are retryable 503, never cached as missing/empty sitemap', async () => {
     const fail = async () => { throw new Error('sensitive details'); };
-    for (const result of [await comicPage('123', fail), await catalogPage(fail), await sitemapPage(fail)]) {
+    for (const result of [await comicPage('123', fail), await homePage(fail), await sitemapPage(fail)]) {
         assert.equal(result.status, 503);
         assert.equal(result.headers.get('cache-control'), 'no-store');
         assert.equal(result.headers.get('retry-after'), '60');
@@ -62,7 +67,7 @@ test('sitemap uses public canonical URLs and actual valid modification dates', a
     const result = await sitemapPage(read);
     const xml = await result.text();
     assert.match(result.headers.get('content-type'), /application\/xml/);
-    assert.equal((xml.match(/<url>/g) || []).length, 4);
+    assert.equal((xml.match(/<url>/g) || []).length, 3);
     assert.match(xml, /<loc>https:\/\/www.keli.love\/comics\/123<\/loc>/);
     assert.match(xml, /<lastmod>2026-11-26T02:00:00.000Z<\/lastmod>/);
     assert.doesNotMatch(xml, /zaimanhua|must-not-leak/);
@@ -120,9 +125,38 @@ test('live progress refresh preserves cached content when offline or removed', a
     elements = await update(async () => Response.json({ items: [] }));
     assert.match(elements.refreshStatus.textContent, /已不在/);
     elements = await update(async () => Response.json({ items: [{ ...sample, currentEpisode: null }] }));
+    assert.equal(elements.refreshStatus.textContent, '');
+    assert.equal(elements.refreshStatus.hidden, true);
     assert.equal(elements.comicProgress.textContent, '已完成');
     assert.equal(elements.comicCount.textContent, '完成 1 / 3 话');
     elements = await update(async () => Response.json({ items: [{ ...sample, currentEpisode: { title: '<script>', progress: '已完结' } }] }));
+    assert.equal(elements.refreshStatus.textContent, '');
+    assert.equal(elements.refreshStatus.hidden, true);
     assert.equal(elements.comicProgress.textContent, '已完成');
     assert.equal(elements.comicEpisode.textContent, '<script>');
+});
+
+
+test('home HTML contains every comic and safely embeds the same public data', async () => {
+    const hostile = { ...sample, name: '</script><script>alert(1)</script>__CATALOG_STATUS__$&' };
+    const publicItems = normalizeCatalog({ items: [hostile, ...Array.from({ length: 30 }, (_, index) => ({ ...sample, id: index + 200 }))] });
+    const result = await homePage(async () => publicItems);
+    const html = await result.text();
+    assert.equal(result.status, 200);
+    assert.match(result.headers.get('cache-control'), /s-maxage=300/);
+    assert.equal((html.match(/class="comic-card"/g) || []).length, 31);
+    assert.match(html, /href="\/comics\/229"/);
+    assert.doesNotMatch(html, /<script>alert|must-not-leak/);
+    const json = html.match(/id="initialCatalog" type="application\/json">([\s\S]*?)<\/script>/)[1];
+    assert.equal(JSON.parse(json).items[0].name, hostile.name);
+    assert.deepEqual(JSON.parse(serializeCatalog(publicItems)).items, publicItems);
+    assert.match(html, /src="\/assets\/home.js"/);
+});
+
+test('former directory redirects to home and is excluded from sitemap', async () => {
+    const result = redirectCatalog();
+    assert.equal(result.status, 301);
+    assert.equal(result.headers.get('location'), '/');
+    const xml = await (await sitemapPage(read)).text();
+    assert.doesNotMatch(xml, /<loc>https:\/\/www.keli.love\/comics<\/loc>/);
 });
