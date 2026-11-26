@@ -1,15 +1,10 @@
 # 可力小屋漫画目录
 欢迎来到**对可爱的事物没有抵抗力汉化组**  
 我们的主页是[**keli.love**](https://www.keli.love)  
-这是一个无需构建步骤的独立静态页面。部署时保留以下结构，并将整个目录上传到任意静态文件服务即可：
-
-```text
-upload/
-├── index.html
-├── README.md
-└── assets/
-    └── logo.png
-```
+首页是无需前端构建的静态页面；漫画目录、详情页和 sitemap 由 EdgeOne Makers
+Node.js Cloud Functions 动态返回。请部署整个仓库，保留 `cloud-functions/` 和
+`assets/`，无需增加构建命令或定时重新部署。普通静态文件服务器只能预览首页外壳，
+不能提供目录接口与动态详情页。
 
 ## 配置内容
 
@@ -17,7 +12,6 @@ upload/
 
 - `forceAuditMode`：设为 `true` 可强制显示备案页。
 - `auditDates`：配置每年自动显示备案页的日期范围。
-- `community.announcements`：按顺序添加公告文字。
 - `catalogUrl`：同源 Makers Function 目录地址，固定为 `/api/catalog`。
 - `pageSize`：每页显示的漫画项目数量，默认是 `24`。
 
@@ -27,13 +21,15 @@ Logo 固定使用 `assets/logo.png`，同时作为浏览器标签图标。
 
 ## Bot 目录数据
 
-页面仅读取 `catalog.json` 的 `items` 数组。每个项目至少应提供 `name`；支持的字段为：
+页面仅读取 `catalog.json` 的 `items` 数组。每个项目至少应提供 `name`；站内详情页还需要稳定的 `id`（正整数项目 ID，
+或 `episode-正整数` 的独立话 ID）。改名不改变详情页地址。支持的字段为：
 
 ```json
 {
   "generatedAt": "2026-10-11T02:00:00+08:00",
   "items": [
     {
+      "id": 123,
       "name": "漫画名",
       "aliases": ["别称"],
       "tags": ["百合"],
@@ -87,7 +83,7 @@ TRANS_PUBLIC_CATALOG_SYNC_URL=https://www.keli.love/api/catalog-sync
 ```
 
 首次同步成功时，Makers 会创建 Blob 命名空间 `keli-catalog` 和对象
-`catalog.json`。公开读取使用最终一致模式；响应通过 EdgeOne 缓存 5 分钟，Bot 不参与
+`catalog.json`。公开读取使用最终一致模式；响应声明 5 分钟共享缓存（实际 CDN 命中需线上验证），Bot 不参与
 任何访客的目录请求。同步接口拒绝超过 1 MB 的目录，以控制函数资源消耗。公开 JSON
 不应输出成员、群号、Token 或管理接口信息。
 
@@ -113,3 +109,53 @@ python3 -m http.server 8080
 仓库包含 GitHub Actions 工作流 `.github/workflows/trigger-edgeone.yml`。每次推送到 `main` 分支时，工作流会向 EdgeOne 部署钩子发送 `POST` 请求。
 
 请在 GitHub 仓库的 **Settings > Secrets and variables > Actions** 中创建名为 `EDGEONE_DEPLOY_HOOK` 的 Repository secret，值填写 EdgeOne 控制台生成的完整部署钩子 URL。该 URL 可能包含鉴权信息，请勿直接写入仓库文件。
+
+## 搜索入口与动态 HTML
+
+- `/comics`：返回包含全部公开漫画名称、别名和普通详情链接的 HTML，不依赖 JS 翻页。
+- `/comics/123`、`/comics/episode-456`：返回漫画标题、别名、标签、封面、进度、
+  更新时间和再漫画阅读入口。首页卡片优先进入站内详情页；缺少合法 ID 的旧数据仍使用外链。
+- `/sitemap.xml`：函数动态返回首页、目录页、详情页的正式域名地址；详情页的 `lastmod`
+  只使用有效的 `updatedAt`，不使用当前请求时间。原来的搜索引擎验证文件保持可用。
+- `/robots.txt`：允许抓取并声明 sitemap。部署后在各站长平台提交
+  `https://www.keli.love/sitemap.xml`。
+
+所有访客和爬虫获取相同 HTML。详情页的 JS 仅刷新进度，失败时保留 HTML 中的记录。
+新增页面只输出展示字段；文本做 HTML 转义，外部图片和阅读链接按 HTTPS 域名白名单校验。
+不存在的漫画返回真实 404；Blob 读取失败或尚未同步返回 503，错误响应禁止缓存。
+
+### 缓存与更新
+
+动态 HTML 和 sitemap 声明 `public, max-age=60, s-maxage=1800`：浏览器缓存 1 分钟，
+支持该策略的共享缓存保存 30 分钟。读取目录另有 **60 秒函数实例内缓存**，合并同实例的
+并发读取；冷启动、不同实例不会共享它，也不会因此免除函数调用。
+
+Bot 同步后无需重新部署。新增、改名、删除会在各层缓存过期及 Blob 最终一致读取刷新后反映；
+删除不是即时撤回，旧详情可能在缓存有效期内继续访问。必要时在平台清理相应 URL 缓存。
+详情页 JS 通过现有 `/api/catalog` 获取较新的进度，该接口也有自己的缓存时间。
+
+**不要仅凭响应头认定 EdgeOne 已缓存云函数响应。** 官方缓存文档主要说明静态资源；
+上线后必须重复请求 `/comics`、一个真实详情地址、`/sitemap.xml`，检查平台返回的
+缓存命中信息（如有），并结合云函数调用量与日志确认。若未命中，应核对项目/套餐是否支持
+对应动态路由缓存及其配置；在验证前按每个请求可能调用函数估算额度。
+
+这些新增路由通过 `cloud-functions/comics/index.js`、`cloud-functions/comics/[id].js`
+和 `cloud-functions/sitemap.xml.js` 映射，无需 SPA 重写或构建命令。不要创建同名静态文件
+覆盖函数路由。`_lib/` 内的辅助模块没有 Handler 导出，不会成为独立函数路由。
+
+### 验证
+
+使用 Node.js 22 或更新版本运行 `npm test`，覆盖 HTML 注入、链接校验、404/503、
+sitemap、缓存过期/并发读取、删除和前端刷新失败。无需新增测试依赖。
+部署后检查：
+
+```bash
+curl -i https://www.keli.love/comics
+curl -i https://www.keli.love/comics/123 # 替换为真实 ID
+curl -i https://www.keli.love/comics/999999999999
+curl -i https://www.keli.love/sitemap.xml
+curl -i https://www.keli.love/robots.txt
+```
+
+查看详情页源代码应直接包含漫画名和进度；禁用 JavaScript 仍可浏览目录和详情。
+上线需一次代码部署，后续目录更新不会触发构建。

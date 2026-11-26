@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="可力小屋汉化进度目录">
+    <meta name="description" content="可力小屋，对可爱的事物没有抵抗力汉化组。查看漫画名称、别名、汉化进度与更新信息。">
+    <link rel="canonical" href="https://www.keli.love/">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' https://images.zaimanhua.com https://moe.jitsu.top https://pic.rmb.bdstatic.com https://count.getloli.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
     <link rel="icon" href="assets/logo.png" type="image/png">
-    <title>可力小屋</title>
+    <title>可力小屋 - 对可爱的事物没有抵抗力汉化组｜漫画汉化进度</title>
     <style>
         :root { color-scheme: light; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; }
         * { box-sizing: border-box; }
@@ -19,6 +20,7 @@
         .brand-copy { display: grid; line-height: 1.15; }
         .brand-copy strong { color: #ed649c; font-size: 1rem; }
         .brand-copy span { margin-top: 3px; color: #a48491; font-size: .7rem; }
+        .catalog-link { margin-left: auto; color: #aa3567; font-size: .85rem; }
         .nav-link { color: #76616b; font-size: .9rem; text-decoration: none; }
         .nav-link:hover { color: #ed649c; }
         .page { width: min(100% - 40px, 1120px); margin: 32px auto 0; padding: 30px 30px 88px; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: rgba(255, 255, 255, .88); box-shadow: 0 12px 32px rgba(122, 67, 91, .14); }
@@ -101,6 +103,7 @@
             <img src="assets/logo.png" alt="">
             <span class="brand-copy"><strong>可力小屋</strong><span>对可爱的事物没有抵抗力汉化组</span></span>
         </a>
+        <a href="/comics" class="catalog-link">全部漫画与汉化进度</a>
     </header>
     <main id="communityContent" class="page">
         <section class="hero" aria-labelledby="catalogTitle">
@@ -233,7 +236,9 @@
                         : value.currentEpisode.progress
                 }
                 : null;
+            const id = typeof value.id === "string" || Number.isSafeInteger(value.id) ? String(value.id) : "";
             return {
+                pageUrl: /^(?:[1-9]\d*|episode-[1-9]\d*)$/.test(id) ? `/comics/${id}` : "",
                 name: value.name,
                 aliases,
                 tags,
@@ -280,8 +285,8 @@
         }
 
         function createCard(item) {
-            const card = item.detailUrl
-                ? createElement("a", { className: "comic-card", href: item.detailUrl, target: "_blank", rel: "noopener noreferrer", referrerPolicy: "no-referrer" })
+            const card = item.pageUrl || item.detailUrl
+                ? createElement("a", { className: "comic-card", href: item.pageUrl || item.detailUrl, rel: "noopener noreferrer", referrerPolicy: "no-referrer" })
                 : createElement("article", { className: "comic-card" });
             appendCover(card, item);
             const body = createElement("div", { className: "card-body" });
@@ -359,7 +364,7 @@
 
         function renderCommunity() {
             const { community } = siteConfig;
-            document.title = siteConfig.title;
+            document.title = `${siteConfig.title} - 对可爱的事物没有抵抗力汉化组｜漫画汉化进度`;
             document.body.style.backgroundImage = `url("${community.backgroundImage}")`;
             document.body.style.backgroundPosition = "center";
             document.body.style.backgroundSize = "cover";
