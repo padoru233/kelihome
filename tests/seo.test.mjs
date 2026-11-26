@@ -160,3 +160,16 @@ test('former directory redirects to home and is excluded from sitemap', async ()
     const xml = await (await sitemapPage(read)).text();
     assert.doesNotMatch(xml, /<loc>https:\/\/www.keli.love\/comics<\/loc>/);
 });
+
+
+test('public sitemap route explicitly rewrites to a normal function route', async () => {
+    const config = JSON.parse(await readFile(new URL('../edgeone.json', import.meta.url), 'utf8'));
+    assert.deepEqual(config.rewrites.find(rule => rule.source === '/sitemap.xml'), {
+        source: '/sitemap.xml', destination: '/api/sitemap'
+    });
+    const handler = await import('../cloud-functions/api/sitemap.js');
+    assert.equal(typeof handler.onRequestGet, 'function');
+    assert.deepEqual(config.redirects.find(rule => rule.source === '/index.html'), {
+        source: '/index.html', destination: '/', statusCode: 301
+    });
+});

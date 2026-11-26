@@ -144,7 +144,9 @@ Bot 同步后无需重新部署。新增、改名、删除会在各层缓存过�
 对应动态路由缓存及其配置；在验证前按每个请求可能调用函数估算额度。
 
 这些路由通过 `cloud-functions/index.js`、`cloud-functions/comics/[id].js`
-和 `cloud-functions/sitemap.xml.js` 映射，无需 SPA 重写或构建命令。不要创建同名静态文件
+和 `cloud-functions/api/sitemap.js` 映射，无需构建命令。`edgeone.json` 显式将
+`/sitemap.xml` 内部重写到 `/api/sitemap`，并将旧 `/index.html` 重定向到 `/`；不要依赖
+`sitemap.xml.js` 或 `index.html.js` 这样的多后缀文件名自动生成路由。不要创建同名静态文件
 覆盖函数路由。`_lib/` 内的辅助模块没有 Handler 导出，不会成为独立函数路由。
 
 ### 验证
