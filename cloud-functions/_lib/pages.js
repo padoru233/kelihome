@@ -1,6 +1,6 @@
 import { comicId, readCatalog } from "./catalog.js";
 
-export const ORIGIN = "https://www.keli.love";
+export const ORIGIN = "https://keli.love";
 const CACHE = "public, max-age=60, s-maxage=1800";
 export function escape(value) {
     return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);

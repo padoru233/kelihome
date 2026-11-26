@@ -4,7 +4,7 @@ export default `<!doctype html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="可力小屋，对可爱的事物没有抵抗力汉化组。查看漫画名称、别名、汉化进度与更新信息。">
-    <link rel="canonical" href="https://www.keli.love/">
+    <link rel="canonical" href="https://keli.love/">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' https://images.zaimanhua.com https://moe.jitsu.top https://pic.rmb.bdstatic.com https://count.getloli.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
     <link rel="icon" href="/assets/logo.png" type="image/png">
     <title>可力小屋 - 对可爱的事物没有抵抗力汉化组｜漫画汉化进度</title>

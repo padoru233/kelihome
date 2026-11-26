@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.keli.love/sitemap.xml
+Sitemap: https://keli.love/sitemap.xml

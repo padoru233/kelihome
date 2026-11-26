@@ -23,7 +23,7 @@ test('HTML contains crawlable content, stable links, escaped text, and no privat
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
     assert.doesNotMatch(html, /must-not-leak|<script>alert/);
     assert.match(html, /完成 1 \/ 3 话/);
-    assert.match(html, /rel="canonical" href="https:\/\/www.keli.love\/comics\/123"/);
+    assert.match(html, /rel="canonical" href="https:\/\/keli.love\/comics\/123"/);
     assert.match(html, /汉化进度：<span id="comicEpisode">第 2 话<\/span> <span id="comicProgress">校对中<\/span>/);
     assert.match(html, /<p>汉化进度与更新信息，由可力小屋整理<\/p>/);
     assert.match(html, /id="refreshStatus" role="status" hidden><\/p>/);
@@ -68,7 +68,7 @@ test('sitemap uses public canonical URLs and actual valid modification dates', a
     const xml = await result.text();
     assert.match(result.headers.get('content-type'), /application\/xml/);
     assert.equal((xml.match(/<url>/g) || []).length, 3);
-    assert.match(xml, /<loc>https:\/\/www.keli.love\/comics\/123<\/loc>/);
+    assert.match(xml, /<loc>https:\/\/keli.love\/comics\/123<\/loc>/);
     assert.match(xml, /<lastmod>2026-11-26T02:00:00.000Z<\/lastmod>/);
     assert.doesNotMatch(xml, /zaimanhua|must-not-leak/);
     const invalidDate = normalizeCatalog({ items: [{ ...sample, updatedAt: 'bad' }] });
@@ -158,7 +158,7 @@ test('former directory redirects to home and is excluded from sitemap', async ()
     assert.equal(result.status, 301);
     assert.equal(result.headers.get('location'), '/');
     const xml = await (await sitemapPage(read)).text();
-    assert.doesNotMatch(xml, /<loc>https:\/\/www.keli.love\/comics<\/loc>/);
+    assert.doesNotMatch(xml, /<loc>https:\/\/keli.love\/comics<\/loc>/);
 });
 
 

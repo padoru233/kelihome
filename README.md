@@ -1,6 +1,7 @@
 # 可力小屋漫画目录
 欢迎来到**对可爱的事物没有抵抗力汉化组**  
-我们的主页是[**keli.love**](https://www.keli.love)  
+我们的主页是[**keli.love**](https://keli.love)
+
 首页、漫画详情页和 sitemap 由 EdgeOne Makers Node.js Cloud Functions 动态返回，
 样式和浏览器脚本为静态资源。请部署整个仓库，保留 `cloud-functions/` 和 `assets/`。
 不需要前端构建命令、定时构建或单独运行后台服务器；Bot 更新 Blob 后，各层缓存刷新即可生效。
@@ -84,7 +85,7 @@ CATALOG_SYNC_TOKEN=<高强度随机值>
 将同一个值配置到 Bot 的 `TRANS_PUBLIC_CATALOG_SYNC_TOKEN`，并设置：
 
 ```text
-TRANS_PUBLIC_CATALOG_SYNC_URL=https://www.keli.love/api/catalog-sync
+TRANS_PUBLIC_CATALOG_SYNC_URL=https://keli.love/api/catalog-sync
 ```
 
 首次同步成功时，Makers 会创建 Blob 命名空间 `keli-catalog` 和对象
@@ -92,7 +93,7 @@ TRANS_PUBLIC_CATALOG_SYNC_URL=https://www.keli.love/api/catalog-sync
 任何访客的目录请求。同步接口拒绝超过 1 MB 的目录，以控制函数资源消耗。公开 JSON
 不应输出成员、群号、Token 或管理接口信息。
 
-部署后可用 `curl -i https://www.keli.love/api/catalog` 排查：
+部署后可用 `curl -i https://keli.love/api/catalog` 排查：
 
 - `200`：目录已同步；
 - `503` 且 `X-Catalog-Status: empty`：函数与 Blob 正常，Bot 尚未同步；
@@ -121,7 +122,7 @@ TRANS_PUBLIC_CATALOG_SYNC_URL=https://www.keli.love/api/catalog-sync
 - `/sitemap.xml`：函数动态返回首页、详情页的正式域名地址；详情页的 `lastmod`
   只使用有效的 `updatedAt`，不使用当前请求时间。原来的搜索引擎验证文件保持可用。
 - `/robots.txt`：允许抓取并声明 sitemap。部署后在各站长平台提交
-  `https://www.keli.love/sitemap.xml`。
+  `https://keli.love/sitemap.xml`。
 
 所有访客和爬虫获取相同 HTML。详情页的 JS 仅刷新进度，失败时保留 HTML 中的记录。
 新增页面只输出展示字段；文本做 HTML 转义，外部图片和阅读链接按 HTTPS 域名白名单校验。
@@ -156,14 +157,24 @@ sitemap、缓存过期/并发读取、删除和前端刷新失败。无需新增
 部署后检查：
 
 ```bash
-curl -i https://www.keli.love/
-curl -i https://www.keli.love/comics # 应返回 301，Location: /
-curl -i https://www.keli.love/comics/123 # 替换为真实 ID
-curl -i https://www.keli.love/comics/999999999999
-curl -i https://www.keli.love/sitemap.xml
-curl -i https://www.keli.love/robots.txt
+curl -i https://keli.love/
+curl -i https://keli.love/comics # 应返回 301，Location: /
+curl -i https://keli.love/comics/123 # 替换为真实 ID
+curl -i https://keli.love/comics/999999999999
+curl -i https://keli.love/sitemap.xml
+curl -i https://keli.love/robots.txt
 ```
 
 查看首页和详情页源代码应直接包含漫画名和进度；禁用 JavaScript 仍可浏览全部漫画和详情。
 浏览器首次打开首页时，网络面板不应出现额外的 `/api/catalog` 请求；详情页仍通过该接口刷新进度。
 上线需一次代码部署，后续目录更新不会触发构建。
+
+## 首选域名与 301 跳转
+
+正式地址为 `https://keli.love`。`edgeone.json` 使用 EdgeOne 的自定义域名规则
+`$wwwhost` → `$host`，将 www 访问永久重定向到根域名；两者均需保留域名绑定及有效 HTTPS 证书。
+部署后检查 `https://www.keli.love/comics/6?from=test` 返回 301，且 Location 保留
+`/comics/6?from=test`；根域名页面不应再次跳回 www。
+
+Bot 写入接口请直接使用 `https://keli.love/api/catalog-sync`，不要依赖 POST 请求经过
+301 跳转，以免客户端改变请求方法或丢失认证头。该规则随代码部署生效，不需要为内容更新重新部署。
