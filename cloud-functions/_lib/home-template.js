@@ -8,7 +8,7 @@ export default `<!doctype html>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' https://images.zaimanhua.com https://moe.jitsu.top https://pic.rmb.bdstatic.com https://count.getloli.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
     <link rel="icon" href="/assets/logo.png" type="image/png">
     <title>可力小屋 - 对可爱的事物没有抵抗力汉化组｜漫画汉化进度</title>
-    <link rel="stylesheet" href="/assets/home.css">
+    <link rel="stylesheet" href="/assets/home.css?v=dad8f90d7d68">
 </head>
 <body>
     <header class="topbar">
@@ -61,7 +61,7 @@ export default `<!doctype html>
         <footer id="auditFooter" class="footer"></footer>
     </main>
     <script id="initialCatalog" type="application/json">__INITIAL_CATALOG__</script>
-    <script src="/assets/home.js" defer></script>
+    <script src="/assets/home.js?v=a64f680c458e" defer></script>
 </body>
 </html>
 `;

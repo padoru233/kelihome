@@ -151,7 +151,7 @@ test('home HTML contains every comic and safely embeds the same public data', as
     const json = html.match(/id="initialCatalog" type="application\/json">([\s\S]*?)<\/script>/)[1];
     assert.equal(JSON.parse(json).items[0].name, hostile.name);
     assert.deepEqual(JSON.parse(serializeCatalog({ generatedAt: null, items: publicItems })).items, publicItems);
-    assert.match(html, /src="\/assets\/home.js"/);
+    assert.match(html, /src="\/assets\/home.js\?v=[a-f0-9]{12}"/);
 });
 
 test('former directory redirects to home and is excluded from sitemap', async () => {
