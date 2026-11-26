@@ -8,12 +8,10 @@ function card(item) {
         : '<div class="cover-placeholder">暂无封面</div>';
     const episode = item.currentEpisode;
     const progress = episode?.progress || "已完成";
-    const count = !item.standalone && item.episodeCount > 0 ? `<span>完成 ${item.completedEpisodeCount} / ${item.episodeCount} 话</span>` : "";
     return `<a class="comic-card" href="/comics/${item.id}"><div class="cover">${cover}</div><div class="card-body">
 <div class="card-title">${escape(item.name)}</div><div class="aliases">${escape(item.aliases.join(" / ") || "暂无别称")}</div>
 <div class="tags">${item.tags.slice(0, 5).map((tag) => `<span class="tag">${escape(tag)}</span>`).join("")}</div>
-<div class="episode"><div class="episode-row">${!item.standalone && episode ? `<span class="episode-title">${escape(episode.title || "当前话数未知")}</span>` : ""}<span class="${episode ? "progress" : "completed"}">${escape(progress)}</span></div>${count}</div>
-<time class="card-date"${item.updatedAt ? ` datetime="${item.updatedAt}"` : ""}>${date(item.updatedAt)}</time></div></a>`;
+<div class="episode"><div class="episode-row">${!item.standalone && episode ? `<span class="episode-title">${escape(episode.title || "当前话数未知")}</span>` : ""}<span class="${episode ? "progress" : "completed"}">${escape(progress)}</span></div></div></div></a>`;
 }
 
 export function serializeCatalog(catalog) {

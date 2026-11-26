@@ -32,6 +32,7 @@ test('HTML contains crawlable content, stable links, escaped text, and no privat
     const directory = await (await homePage(read)).text();
     assert.match(directory, /href="\/comics\/123"/);
     assert.match(directory, /href="\/comics\/episode-5"/);
+    assert.doesNotMatch(directory, /class="card-date"|完成 1 \/ 3 话/);
 });
 
 test('single episodes and empty collections retain existing display semantics', async () => {

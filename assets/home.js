@@ -164,12 +164,8 @@
                     // 当前没有进行中的工序（全部完结或还没有话数）都算已完成
                     episode.append(createElement("span", { className: "completed", textContent: COMPLETED_PROGRESS }));
                 }
-                if (item.episodeCount > 0) {
-                    episode.append(createElement("span", { textContent: `完成 ${item.completedEpisodeCount} / ${item.episodeCount} 话` }));
-                }
             }
             body.append(episode);
-            body.append(createElement("time", { className: "card-date", textContent: formatDate(item.updatedAt), dateTime: item.updatedAt || "" }));
             card.append(body);
             return card;
         }
