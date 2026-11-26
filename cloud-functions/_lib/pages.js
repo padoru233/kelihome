@@ -35,7 +35,7 @@ function missing() {
 export async function comicPage(id, read = readCatalog) {
     if (!comicId(id)) return missing();
     try {
-        const item = (await read()).find((entry) => entry.id === id);
+        const item = (await read()).items.find((entry) => entry.id === id);
         if (!item) return missing();
         const description = `${item.name}${item.aliases.length ? `（又名：${item.aliases.join("、")}）` : ""} · 汉化进度与更新信息，由可力小屋整理`;
         const count = !item.standalone && item.episodeCount > 0 ? `完成 ${item.completedEpisodeCount} / ${item.episodeCount} 话` : "";
@@ -54,7 +54,7 @@ ${item.detailUrl ? `<p><a class="read-link" href="${escape(item.detailUrl)}" tar
 }
 export async function sitemapPage(read = readCatalog) {
     try {
-        const items = await read();
+        const { items } = await read();
         const urls = [{ path: "/" }, ...items.map((item) => ({ path: `/comics/${item.id}`, updatedAt: item.updatedAt }))];
         const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((item) => `<url><loc>${ORIGIN}${item.path}</loc>${item.updatedAt ? `<lastmod>${item.updatedAt}</lastmod>` : ""}</url>`).join("")}</urlset>`;
         return response(body, 200, "application/xml");

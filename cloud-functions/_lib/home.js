@@ -16,21 +16,25 @@ function card(item) {
 <time class="card-date"${item.updatedAt ? ` datetime="${item.updatedAt}"` : ""}>${date(item.updatedAt)}</time></div></a>`;
 }
 
-export function serializeCatalog(items) {
+export function serializeCatalog(catalog) {
     // JSON inside a script element must not be able to close that element.
-    return JSON.stringify({ items }).replace(/[<>&\u2028\u2029]/g, (character) =>
+    return JSON.stringify(catalog).replace(/[<>&\u2028\u2029]/g, (character) =>
         `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }
 
 export async function homePage(read = readCatalog) {
-    let items;
-    try { items = await read(); } catch { items = null; }
+    let catalog;
+    try { catalog = await read(); } catch { catalog = null; }
+    const items = catalog?.items;
     const values = {
-        __INITIAL_CATALOG__: items ? serializeCatalog(items) : "null",
+        __CATALOG_UPDATED__: catalog?.generatedAt
+            ? `<time id="updatedAt" class="updated-at" datetime="${escape(catalog.generatedAt)}">数据更新：${date(catalog.generatedAt)}</time>`
+            : '<time id="updatedAt" class="updated-at"></time>',
+        __INITIAL_CATALOG__: items ? serializeCatalog(catalog) : "null",
         __CATALOG_STATUS__: items ? `共 ${items.length} 个项目` : "目录数据暂时不可用，请稍后刷新重试。",
         __CATALOG_CARDS__: items ? [...items].sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0)).map(card).join("") || '<p class="empty">暂无公开漫画</p>' : '<p class="empty">无法加载漫画目录</p>'
     };
-    const html = template.replace(/__INITIAL_CATALOG__|__CATALOG_STATUS__|__CATALOG_CARDS__/g, (key) => values[key]);
+    const html = template.replace(/__INITIAL_CATALOG__|__CATALOG_STATUS__|__CATALOG_CARDS__|__CATALOG_UPDATED__/g, (key) => values[key]);
     return new Response(html, { status: items ? 200 : 503, headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": items ? "public, max-age=60, s-maxage=300" : "no-store",

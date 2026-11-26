@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
-import { normalizeCatalog, createCatalogReader } from "../cloud-functions/_lib/catalog.js";
+import { normalizeCatalog, normalizeCatalogSnapshot, createCatalogReader } from "../cloud-functions/_lib/catalog.js";
 import { comicPage, sitemapPage } from "../cloud-functions/_lib/pages.js";
 
 import { homePage, serializeCatalog } from "../cloud-functions/_lib/home.js";
@@ -13,7 +13,7 @@ const sample = { id: 123, name: '漫画<&"测试', aliases: ['别名<script>aler
     updatedAt: '2026-11-26T02:00:00Z', coverUrl: 'https://images.zaimanhua.com/webpic/8/a.jpg',
     detailUrl: 'https://manhua.zaimanhua.com/details/123', secret: 'must-not-leak' };
 const items = () => normalizeCatalog({ items: [sample, { ...sample, id: 'episode-5', standalone: true, currentEpisode: null }] });
-const read = async () => items();
+const read = async () => ({ generatedAt: null, items: items() });
 
 test('HTML contains crawlable content, stable links, escaped text, and no private fields', async () => {
     const result = await comicPage('123', read);
@@ -38,12 +38,12 @@ test('single episodes and empty collections retain existing display semantics', 
     const html = await (await comicPage('episode-5', read)).text();
     assert.match(html, /已完成/);
     assert.doesNotMatch(html, /完成 1 \/ 3 话/);
-    assert.match(await (await homePage(async () => [])).text(), /暂无公开漫画/);
+    assert.match(await (await homePage(async () => ({ generatedAt: null, items: [] }))).text(), /暂无公开漫画/);
 });
 
 test('invalid IDs avoid storage; absent comics return uncached real 404', async () => {
     let calls = 0;
-    const reader = async () => { calls++; return items(); };
+    const reader = async () => { calls++; return { items: items() }; };
     for (const id of ['../123', '<script>', '__proto__', '', '0']) {
         const result = await comicPage(id, reader);
         assert.equal(result.status, 404);
@@ -72,7 +72,7 @@ test('sitemap uses public canonical URLs and actual valid modification dates', a
     assert.match(xml, /<lastmod>2026-11-26T02:00:00.000Z<\/lastmod>/);
     assert.doesNotMatch(xml, /zaimanhua|must-not-leak/);
     const invalidDate = normalizeCatalog({ items: [{ ...sample, updatedAt: 'bad' }] });
-    assert.doesNotMatch(await (await sitemapPage(async () => invalidDate)).text(), /lastmod/);
+    assert.doesNotMatch(await (await sitemapPage(async () => ({ items: invalidDate }))).text(), /lastmod/);
 });
 
 test('normalization rejects unsafe URLs, duplicate IDs and strips nonpublic fields', () => {
@@ -93,9 +93,9 @@ test('warm cache coalesces reads, expires, and reflects removals without deploym
     await Promise.all([reader(), reader(), reader()]);
     assert.equal(calls, 1);
     data = { items: [] };
-    assert.equal((await reader()).length, 1);
+    assert.equal((await reader()).items.length, 1);
     time = 60_001;
-    assert.equal((await reader()).length, 0);
+    assert.equal((await reader()).items.length, 0);
     assert.equal(calls, 2);
     assert.equal((await comicPage('123', reader)).status, 404);
 });
@@ -107,7 +107,7 @@ test('failed reads do not poison cache', async () => {
         return { items: [sample] };
     });
     await assert.rejects(reader(), /offline/);
-    assert.equal((await reader()).length, 1);
+    assert.equal((await reader()).items.length, 1);
 });
 
 // Exercise the browser updater without a network or a DOM implementation dependency.
@@ -140,7 +140,7 @@ test('live progress refresh preserves cached content when offline or removed', a
 test('home HTML contains every comic and safely embeds the same public data', async () => {
     const hostile = { ...sample, name: '</script><script>alert(1)</script>__CATALOG_STATUS__$&' };
     const publicItems = normalizeCatalog({ items: [hostile, ...Array.from({ length: 30 }, (_, index) => ({ ...sample, id: index + 200 }))] });
-    const result = await homePage(async () => publicItems);
+    const result = await homePage(async () => ({ generatedAt: null, items: publicItems }));
     const html = await result.text();
     assert.equal(result.status, 200);
     assert.match(result.headers.get('cache-control'), /s-maxage=300/);
@@ -149,7 +149,7 @@ test('home HTML contains every comic and safely embeds the same public data', as
     assert.doesNotMatch(html, /<script>alert|must-not-leak/);
     const json = html.match(/id="initialCatalog" type="application\/json">([\s\S]*?)<\/script>/)[1];
     assert.equal(JSON.parse(json).items[0].name, hostile.name);
-    assert.deepEqual(JSON.parse(serializeCatalog(publicItems)).items, publicItems);
+    assert.deepEqual(JSON.parse(serializeCatalog({ generatedAt: null, items: publicItems })).items, publicItems);
     assert.match(html, /src="\/assets\/home.js"/);
 });
 
@@ -172,4 +172,53 @@ test('public sitemap route explicitly rewrites to a normal function route', asyn
     assert.deepEqual(config.redirects.find(rule => rule.source === '/index.html'), {
         source: '/index.html', destination: '/', statusCode: 301
     });
+});
+
+
+test('catalog generation time survives storage, HTML, embedded JSON and cache refresh', async () => {
+    let time = 0;
+    let generatedAt = '2026-11-26T12:34:00+08:00';
+    const reader = createCatalogReader(async () => ({ generatedAt, items: [sample], secret: 'private' }), () => time);
+    const snapshot = await reader();
+    assert.equal(snapshot.generatedAt, '2026-11-26T04:34:00.000Z');
+    const html = await (await homePage(reader)).text();
+    assert.match(html, /id="updatedAt" class="updated-at" datetime="2026-11-26T04:34:00.000Z">数据更新：[^<]*12:34/);
+    const json = JSON.parse(html.match(/id="initialCatalog" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+    assert.equal(json.generatedAt, snapshot.generatedAt);
+    assert.equal(json.secret, undefined);
+    generatedAt = '2026-11-26T13:45:00+08:00';
+    time = 60_001;
+    assert.equal((await reader()).generatedAt, '2026-11-26T05:45:00.000Z');
+    for (const value of [undefined, null, 'bad', '<script>']) {
+        const invalid = normalizeCatalogSnapshot({ generatedAt: value, items: [] });
+        assert.equal(invalid.generatedAt, null);
+        const empty = await (await homePage(async () => invalid)).text();
+        assert.match(empty, /id="updatedAt" class="updated-at"><\/time>/);
+        assert.doesNotMatch(empty, /数据更新：|Invalid Date/);
+    }
+});
+
+
+test('browser restores the snapshot timestamp without a second catalog request', async () => {
+    const script = await readFile(new URL('../assets/home.js', import.meta.url), 'utf8');
+    const stamp = { textContent: '', removeAttribute(key) { delete this[key === 'datetime' ? 'dateTime' : key]; } };
+    const initial = { textContent: JSON.stringify({ generatedAt: '2026-11-26T04:34:00.000Z', items: [] }) };
+    const node = () => ({ textContent: '', value: '', addEventListener() {}, classList: { toggle() {}, remove() {} }, replaceChildren() {}, append() {} });
+    const nodes = new Map([['updatedAt', stamp], ['initialCatalog', initial]]);
+    const document = {
+        body: { style: {} },
+        getElementById(id) { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); },
+        createElement: node
+    };
+    let requests = 0;
+    const context = vm.createContext({ document, Intl, AbortController, setTimeout, clearTimeout, console,
+        fetch() { requests++; throw new Error('Unexpected request'); } });
+    vm.runInContext(script.replace('        initPage();', ''), context);
+    vm.runInContext('renderCommunity()', context);
+    assert.match(stamp.textContent, /^数据更新：/);
+    assert.equal(stamp.dateTime, '2026-11-26T04:34:00.000Z');
+    assert.equal(requests, 0);
+    vm.runInContext('renderUpdatedAt("bad")', context);
+    assert.equal(stamp.textContent, '');
+    assert.equal(stamp.dateTime, undefined);
 });

@@ -194,6 +194,16 @@
             elements.pageIndicator.textContent = `${state.page} / ${pageCount}`;
         }
 
+        function renderUpdatedAt(value) {
+            if (typeof value === "string" && Number.isFinite(Date.parse(value))) {
+                elements.updatedAt.dateTime = new Date(value).toISOString();
+                elements.updatedAt.textContent = `数据更新：${formatDate(value)}`;
+            } else {
+                elements.updatedAt.removeAttribute("datetime");
+                elements.updatedAt.textContent = "";
+            }
+        }
+
         async function loadCatalog() {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 8000);
@@ -203,7 +213,7 @@
                 const catalog = await response.json();
                 if (!catalog || !Array.isArray(catalog.items)) throw new Error("目录数据格式无效");
                 state.items = catalog.items.map(normalizeItem).filter(Boolean);
-                elements.updatedAt.textContent = catalog.generatedAt ? `数据更新：${formatDate(catalog.generatedAt)}` : "";
+                renderUpdatedAt(catalog.generatedAt);
                 renderCatalog();
             } catch (error) {
                 elements.status.textContent = "目录数据暂时不可用，请稍后刷新重试。";
@@ -233,6 +243,7 @@
             const initial = document.getElementById("initialCatalog");
             const catalog = initial ? JSON.parse(initial.textContent) : null;
             if (Array.isArray(catalog?.items)) {
+                renderUpdatedAt(catalog.generatedAt);
                 state.items = catalog.items.map(normalizeItem).filter(Boolean);
                 renderCatalog();
             } else {

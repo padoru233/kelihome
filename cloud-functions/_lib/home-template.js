@@ -22,7 +22,7 @@ export default `<!doctype html>
             <div>
                 <h1 id="catalogTitle">汉化进度</h1>
             </div>
-            <time id="updatedAt" class="updated-at"></time>
+            __CATALOG_UPDATED__
         </section>
         <div class="join-groups">
             <section class="join-card" aria-label="交流群">

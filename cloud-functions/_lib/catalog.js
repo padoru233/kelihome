@@ -39,6 +39,13 @@ export function normalizeCatalog(value) {
     });
 }
 
+export function normalizeCatalogSnapshot(value) {
+    const items = normalizeCatalog(value);
+    const generatedAt = typeof value.generatedAt === "string" && Number.isFinite(Date.parse(value.generatedAt))
+        ? new Date(value.generatedAt).toISOString() : null;
+    return { generatedAt, items };
+}
+
 // This cache only exists within a warm function instance, not across the CDN.
 export function createCatalogReader(read, now = Date.now) {
     let cached;
@@ -47,10 +54,10 @@ export function createCatalogReader(read, now = Date.now) {
     return async () => {
         if (cached && now() < expires) return cached;
         if (!pending) {
-            pending = Promise.resolve().then(read).then(normalizeCatalog).then((items) => {
-                cached = items;
+            pending = Promise.resolve().then(read).then(normalizeCatalogSnapshot).then((catalog) => {
+                cached = catalog;
                 expires = now() + 60_000;
-                return items;
+                return catalog;
             }).finally(() => { pending = undefined; });
         }
         return pending;
